@@ -1,13 +1,13 @@
-import {HttpClient, HttpHeaders} from '@angular/common/http';
-import {EventEmitter, Injectable} from '@angular/core';
-import {Output, OutputsResponse} from '../model/output';
-import {TxLogEntry} from '../model/tx-log-entry';
-import {WalletInfo} from '../model/walletinfo';
-import {Error} from '../model/error';
-import {SendTXArgs} from '../model/sender';
-import {Observable, of} from 'rxjs';
-import {map} from 'rxjs/operators';
-import {ActivatedRoute, Resolve, Router} from '@angular/router';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { EventEmitter, Injectable } from '@angular/core';
+import { Output, OutputsResponse } from '../model/output';
+import { TxLogEntry } from '../model/tx-log-entry';
+import { WalletInfo } from '../model/walletinfo';
+import { Error } from '../model/error';
+import { SendTXArgs } from '../model/sender';
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { ActivatedRoute, Resolve, Router } from '@angular/router';
 
 @Injectable()
 export class WalletService {
@@ -17,6 +17,7 @@ export class WalletService {
   private wallet_info_url = 'http://localhost:13420/v1/wallet/owner/retrieve_summary_info';
   private node_height_url = 'http://localhost:13420/v1/wallet/owner/node_height';
   private send_url = 'http://localhost:13420/v1/wallet/owner/issue_send_tx';
+  private post_url = 'http://localhost:13420/v1/wallet/owner/post_tx';
 
   isUpdatingEmitter: EventEmitter<boolean> = new EventEmitter<boolean>();
   totalFailureEmitter: EventEmitter<boolean> = new EventEmitter<boolean>();
@@ -47,11 +48,11 @@ export class WalletService {
   refreshHeight(): void {
     this.http.get(this.node_height_url)
       .subscribe(heightInfo => {
-          this.totalFailureEmitter.emit(false);
-          if (heightInfo[1]) {
-            this.currentNodeHeight = heightInfo[0];
-          }
-        },
+        this.totalFailureEmitter.emit(false);
+        if (heightInfo[1]) {
+          this.currentNodeHeight = heightInfo[0];
+        }
+      },
         error => {
           this.totalFailureEmitter.emit(true);
         });
@@ -85,7 +86,7 @@ export class WalletService {
   getOutputs(tx_id: number, show_spent: boolean): Observable<Output[]> {
     let url = this.output_url;
     if (tx_id != null) {
-     url += '?tx_id=' + tx_id;
+      url += '?tx_id=' + tx_id;
     }
     if (show_spent === true) {
       if (tx_id != null) {
@@ -124,9 +125,9 @@ export class WalletService {
 
 
 
-  postSend(args: SendTXArgs): void {
+  postSend(args: SendTXArgs, fluff: boolean): void {
     console.log('Posting - ' + this.send_url);
-    console.dir(args);
+    console.dir(args, fluff);
     this.http.post(this.send_url, args)
       .subscribe((res) => {
         this.walletErrorEmitter.emit({

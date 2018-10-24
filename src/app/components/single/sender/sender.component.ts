@@ -1,11 +1,11 @@
-import {Component, Input, OnInit} from '@angular/core';
-import {WalletService} from '../../../services/wallet.service';
-import {SendTXArgs} from '../../../model/sender';
+import { Component, Input, OnInit } from '@angular/core';
+import { WalletService } from '../../../services/wallet.service';
+import { SendTXArgs } from '../../../model/sender';
 
-import {NgbModal, NgbActiveModal} from '@ng-bootstrap/ng-bootstrap';
-import {Subject} from 'rxjs';
-import {debounceTime} from 'rxjs/operators';
-import {UtilService} from '../../../services/util.service';
+import { NgbModal, NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+import { UtilService } from '../../../services/util.service';
 
 @Component({
   selector: 'app-sender',
@@ -42,11 +42,12 @@ export class SenderComponent implements OnInit {
 })
 export class SenderContentComponent implements OnInit {
   txSendArgs = new SendTXArgs;
+  fluff = true
   show_error = false;
 
   constructor(public activeModal: NgbActiveModal,
-              private walletService: WalletService,
-              private util: UtilService) {
+    private walletService: WalletService,
+    private util: UtilService) {
   }
 
   ngOnInit() {
@@ -60,7 +61,7 @@ export class SenderContentComponent implements OnInit {
   postSend(): void {
     let sending = Object.assign({}, this.txSendArgs);
     sending.amount = this.util.hrToAmount(sending.amount);
-    this.walletService.postSend(sending);
+    this.walletService.postSend(sending, this.fluff);
 
   }
 }
