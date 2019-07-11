@@ -1,12 +1,14 @@
  <table class="table table-sm  w-100 table-striped table-hover">
    <tbody>
-   <ng-container *ngFor="let tx of txs?.reverse();let i = index" >
-     <tr *ngIf="i<num_entries || num_entries==0" [routerLink]="['/tx-detail', tx.id]" style="cursor: pointer;" >
-       <td class="">{{util.parseDate(tx.creation_ts)}}</td>
-       <td class="">{{util.parseTxType(tx)}}</td>
-       <td class="text-right" [ngClass]="util.netChange(tx)<0?'text-danger':'text-success'"> {{util.amountAsHr(util.netChange(tx), 9)}}</td>
-       <td class="text-right" [ngClass]="!tx.confirmed?'text-danger':'text-success'"> {{util.parseConfirmed(tx)}}</td>
-     </tr>
-   </ng-container>
+     <ng-container *ngFor="let tx of txs?.reverse();let i = index">
+       <tr *ngIf="i<num_entries || num_entries==0" [routerLink]="['/tx-detail', tx.id]" style="cursor: pointer;">
+         <td class="">{{util.parseDate(tx.creation_ts)}}</td>
+         <td class="">{{util.parseTxType(tx)}}</td>
+         <!--<td class="">{{tx.tx_slate_id}}</td>-->
+         <td class="text-right" [ngClass]="util.netChange(tx)<0?'text-danger':'text-success'">
+           {{util.amountAsHr(util.netChange(tx), 9)}}</td>
+         <td class="text-right" [ngClass]="!tx.confirmed?'text-danger':'text-success'"> {{util.parseConfirmed(tx)}}</td>
+       </tr>
+     </ng-container>
    </tbody>
  </table>

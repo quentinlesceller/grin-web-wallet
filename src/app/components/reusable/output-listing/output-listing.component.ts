@@ -1,8 +1,8 @@
-import {Component, Input, OnDestroy, OnInit} from '@angular/core';
-import {WalletService} from '../../../services/wallet.service';
-import {UtilService} from '../../../services/util.service';
-import {Output} from '../../../model/output';
-import {ActivatedRoute, NavigationEnd, Router} from '@angular/router';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { WalletService } from '../../../services/wallet.service';
+import { UtilService } from '../../../services/util.service';
+import { OutputsResponse, Output, OutputCommitMapping } from '../../../model/output';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 
 @Component({
   selector: 'app-output-listing',
@@ -38,9 +38,31 @@ export class OutputListingComponent implements OnInit, OnDestroy {
 
   getOutputs(id: number, show_spent: boolean): void {
     console.log('Output-Listing subscription');
-    this.walletService.getOutputs(id, show_spent)
-      .subscribe((outputs) => {
-        this.outputs = outputs;
+    this.walletService.getOutputs(show_spent, id).then(
+      response => {
+        var data = response.data;
+        if (data.error) {
+          // TODO
+          console.log(data.error)
+        } else {
+          var outputsResponse: OutputsResponse = data.result['Ok'];
+          if (!outputsResponse[0]) {
+            // TODO
+            console.log("Not refreshed from node outputs");
+          } else {
+            console.log(outputsResponse[1])
+            var outputsCommitMapping: OutputCommitMapping[] = outputsResponse[1];
+            // Convert to outputs array
+            var outputs: Output[] = []
+            outputsCommitMapping.forEach(outputCommitMapping => {
+              outputs.push(outputCommitMapping.output);
+            });
+            this.outputs = outputs;
+          }
+        }
+      })
+      .catch(error => {
+        console.log(error);
       });
   }
 

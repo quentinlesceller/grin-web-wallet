@@ -1,8 +1,8 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { WalletService } from '../../../services/wallet.service';
-import {UtilService} from '../../../services/util.service';
-import {WalletInfo} from '../../../model/walletinfo';
-import {NavigationEnd, Router} from '@angular/router';
+import { UtilService } from '../../../services/util.service';
+import { WalletInfo } from '../../../model/walletinfo';
+import { NavigationEnd, Router } from '@angular/router';
 
 @Component({
   selector: 'app-summary',
@@ -27,9 +27,25 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   getWalletInfo(): void {
     console.log('Summary Wallet-info subscription');
-    this.walletService.getWalletInfo()
-      .subscribe((info) => {
-        this.info = info;
+    // TODO: DISABLED UNTIL I Figure this out
+    this.walletService.getWalletInfo().then(
+      response => {
+        var data = response.data;
+        if (data.error) {
+          // TODO
+          console.log(data.error)
+        } else {
+          if (!data.result['Ok'][0]) {
+            // TODO
+            console.log("Not refreshed from node");
+          } else {
+            var info: WalletInfo = data.result['Ok'][1];
+            this.info = info;
+          }
+        }
+      })
+      .catch(error => {
+        console.log(error);
       });
   }
 

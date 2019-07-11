@@ -1,22 +1,16 @@
-import {HttpClient, HttpHeaders} from '@angular/common/http';
-import {EventEmitter, Injectable} from '@angular/core';
-import {Output, OutputsResponse} from '../model/output';
-import {TxLogEntry} from '../model/tx-log-entry';
-import {WalletInfo} from '../model/walletinfo';
-import {Error} from '../model/error';
-import {SendTXArgs} from '../model/sender';
-import {Observable, of} from 'rxjs';
-import {map} from 'rxjs/operators';
-import {ActivatedRoute, Resolve, Router} from '@angular/router';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { EventEmitter, Injectable } from '@angular/core';
+import { WalletInfo } from '../model/walletinfo';
+import { Error } from '../model/error';
+import { SendTXArgs } from '../model/sender';
+import { Observable, of } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { RpcClient } from 'jsonrpc-ts';
 
 @Injectable()
 export class WalletService {
-
-  private output_url = 'http://localhost:13420/v1/wallet/owner/retrieve_outputs';
-  private txs_url = 'http://localhost:13420/v1/wallet/owner/retrieve_txs';
-  private wallet_info_url = 'http://localhost:13420/v1/wallet/owner/retrieve_summary_info';
-  private node_height_url = 'http://localhost:13420/v1/wallet/owner/node_height';
-  private send_url = 'http://localhost:13420/v1/wallet/owner/issue_send_tx';
+  private wallet_owner_api_url = 'http://localhost:13420/v2/owner'
+  private send_url = 'http://localhost:3420/v1/wallet/owner/issue_send_tx';
 
   isUpdatingEmitter: EventEmitter<boolean> = new EventEmitter<boolean>();
   totalFailureEmitter: EventEmitter<boolean> = new EventEmitter<boolean>();
@@ -25,6 +19,7 @@ export class WalletService {
   walletErrorEmitter: EventEmitter<Error> = new EventEmitter<Error>();
 
   currentNodeHeight: number;
+  client: RpcClient;
 
   constructor(
     private http: HttpClient,
@@ -32,6 +27,7 @@ export class WalletService {
     private router: Router,
   ) {
     this.currentNodeHeight = 0;
+    this.client = new RpcClient({ url: this.wallet_owner_api_url });
   }
 
   showSender(): void {
@@ -45,16 +41,27 @@ export class WalletService {
    */
 
   refreshHeight(): void {
-    this.http.get(this.node_height_url)
-      .subscribe(heightInfo => {
-          this.totalFailureEmitter.emit(false);
-          if (heightInfo[1]) {
-            this.currentNodeHeight = heightInfo[0];
+    this.client.makeRequest({
+      jsonrpc: '2.0',
+      method: 'node_height',
+      params: null,
+      id: 1,
+    }).then(
+      response => {
+        this.totalFailureEmitter.emit(false);
+        if (response.data.error) {
+          //TODO
+          console.log("an error happened");
+        } else {
+          // TODO CHECK if refreshed from node
+          if (response.data.result['Ok']['height']) {
+            this.currentNodeHeight = response.data.result['Ok']['height'];
           }
-        },
-        error => {
-          this.totalFailureEmitter.emit(true);
-        });
+        }
+      })
+      .catch(error => {
+        this.totalFailureEmitter.emit(true);
+      });
   }
 
   /**
@@ -66,15 +73,33 @@ export class WalletService {
   refreshWalletFromNode(): void {
     this.isUpdatingEmitter.emit(true);
     // just do a wallet info with with a refresh, ignore the result
-    const wallet_info_url = this.wallet_info_url + '?refresh';
-    this.http.get<WalletInfo>(wallet_info_url)
-      .subscribe(walletInfo => {
-        const info = walletInfo[1];
-        if (info.last_confirmed_height > this.currentNodeHeight) {
-          this.currentNodeHeight = info.last_confirmed_height;
+    this.client.makeRequest({
+      jsonrpc: '2.0',
+      method: 'retrieve_summary_info',
+      params: [true, 1],
+      id: 1,
+    }).then(
+      response => {
+        var data = response.data;
+        if (data.error) {
+          // TODO
+          console.log(data.error)
+        } else {
+          if (!data.result['Ok'][0]) {
+            // TODO
+            console.log("Not refreshed from node");
+          } else {
+            var info: WalletInfo = data.result['Ok'][1];
+            if (info.last_confirmed_height > this.currentNodeHeight) {
+              this.currentNodeHeight = info.last_confirmed_height;
+            }
+            this.router.navigate(this.route.snapshot.url);
+            this.isUpdatingEmitter.emit(false);
+          }
         }
-        this.router.navigate(this.route.snapshot.url);
-        this.isUpdatingEmitter.emit(false);
+      })
+      .catch(error => {
+        console.log(error);
       });
   }
 
@@ -82,47 +107,42 @@ export class WalletService {
    * Rest-y type functions
    */
 
-  getOutputs(tx_id: number, show_spent: boolean): Observable<Output[]> {
-    let url = this.output_url;
-    if (tx_id != null) {
-     url += '?tx_id=' + tx_id;
-    }
-    if (show_spent === true) {
-      if (tx_id != null) {
-        url += '&show_spent=true';
-      } else {
-        url += '?show_spent=true';
-      }
-    }
-    console.log('Calling URL ' + url);
-    return this.http.get<Output>(url)
-      .pipe(map(outputs_response => {
-        return outputs_response[1];
-      }));
+  getOutputs(show_spent: boolean, tx_id: number): Promise<any> {
+    console.log('Calling Output ' + tx_id);
+    return this.client.makeRequest({
+      jsonrpc: '2.0',
+      method: 'retrieve_outputs',
+      params: [show_spent, true, tx_id],
+      id: 1,
+    });
   }
 
-  getTxLog(id: number): Observable<TxLogEntry> {
-    return this.http.get<TxLogEntry>(this.txs_url + '?id=' + id)
-      .pipe(map(tx_response => {
-        return tx_response[1][0];
-      }));
+  getTxLog(id: number): Promise<any> {
+    return this.client.makeRequest({
+      jsonrpc: '2.0',
+      method: 'retrieve_txs',
+      params: [true, id, null],
+      id: 1,
+    });
   }
 
-  getTxLogs(): Observable<TxLogEntry[]> {
-    return this.http.get<TxLogEntry>(this.txs_url)
-      .pipe(map(tx_response => {
-        return tx_response[1];
-      }));
+  getTxLogs(): Promise<any> {
+    return this.client.makeRequest({
+      jsonrpc: '2.0',
+      method: 'retrieve_txs',
+      params: [true, null, null],
+      id: 1,
+    });
   }
 
-  getWalletInfo(): Observable<WalletInfo> {
-    return this.http.get<WalletInfo>(this.wallet_info_url)
-      .pipe(map(wallet_response => {
-        return wallet_response[1];
-      }));
+  getWalletInfo(): Promise<any> {
+    return this.client.makeRequest({
+      jsonrpc: '2.0',
+      method: 'retrieve_summary_info',
+      params: [true, 1],
+      id: 1,
+    });
   }
-
-
 
   postSend(args: SendTXArgs): void {
     console.log('Posting - ' + this.send_url);

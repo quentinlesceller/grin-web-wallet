@@ -1,5 +1,6 @@
 
 export class TxLogEntry {
+  parent_key_id: number;
   id: number;
   tx_slate_id: string;
   tx_type: string;
@@ -11,6 +12,7 @@ export class TxLogEntry {
   amount_credited: number;
   amount_debited: number;
   fee: number;
-
+  messages: string;
+  stored_tx: string;
 }
 
